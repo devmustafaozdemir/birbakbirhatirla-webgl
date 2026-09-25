@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="tr">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <meta name="viewport" content="width=device-width, height=device-height, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#1f5130">
+    <title>LezzetHafizasi</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&display=swap" rel="stylesheet">
+    <link rel="preload" as="image" href="TemplateData/bg.jpg">
+    <style>
+      :root {
+        --u: 4px;                       /* sahne genişliğinin %1'i (JS günceller) */
+        --krem: #fffaf0;
+        --yesil: #2f9e44;
+        --yesil-acik: #8fd14f;
+        --yesil-koyu: #1f5130;
+        --golge: rgba(20, 60, 30, .28);
+      }
+      * { box-sizing: border-box; }
+      html, body {
+        margin: 0; padding: 0; width: 100%; height: 100%;
+        overflow: hidden; background: #163d24; touch-action: none;
+        -webkit-user-select: none; user-select: none;
+        -webkit-tap-highlight-color: transparent;
+        font-family: "Fredoka", "Segoe UI", system-ui, -apple-system, sans-serif;
+      }
+
+      /* Kenar boşlukları için bulanık arka plan (telefonda siyah şerit kalmasın) */
+      #arka-bulanik {
+        position: fixed; inset: -40px;
+        background: #163d24 url("TemplateData/bg.jpg") center / cover no-repeat;
+        filter: blur(28px) brightness(.55) saturate(1.2);
+      }
+
+      /* 9:16 sahne: tuval + yükleme ekranı aynı kutuda */
+      #sahne {
+        position: fixed; left: 50%; top: 50%;
+        width: 1080px; height: 1920px;
+        transform: translate(-50%, -50%);
+        overflow: hidden; background: #000;
+        box-shadow: 0 0 60px rgba(0,0,0,.45);
+      }
+      #unity-canvas { display: block; width: 100%; height: 100%; outline: none; background: #000; }
+
+      /* ---------- Yükleme ekranı ---------- */
+      #yukleme {
+        position: absolute; inset: 0; z-index: 5;
+        display: flex; flex-direction: column; align-items: center;
+        color: var(--yesil-koyu);
+        transition: opacity .6s ease, transform .6s ease;
+      }
+      #yukleme.bitti { opacity: 0; transform: scale(1.04); pointer-events: none; }
+      #yukleme .zemin {
+        position: absolute; inset: 0;
+        background: linear-gradient(180deg, #8fd3f4 0%, #b7e38a 55%, #5fae45 100%);
+        background-image: url("TemplateData/bg.jpg"), linear-gradient(180deg, #8fd3f4 0%, #b7e38a 55%, #5fae45 100%);
+        background-size: cover; background-position: center;
+        animation: zemin-zoom 18s ease-in-out infinite alternate;
+      }
+      #yukleme .perde {
+        position: absolute; inset: 0;
+        background:
+          radial-gradient(ellipse at 50% 38%, rgba(255,255,255,.18) 0%, rgba(255,255,255,0) 55%),
+          linear-gradient(180deg, rgba(0,0,0,0) 55%, rgba(10,40,20,.35) 100%);
+      }
+
+      .ust {
+        position: relative; margin-top: calc(var(--u) * 7);
+        animation: ust-gir .8s cubic-bezier(.2,.9,.3,1.2) both;
+      }
+      .logo-kart {
+        background: var(--krem);
+        border-radius: calc(var(--u) * 5);
+        padding: calc(var(--u) * 2.2) calc(var(--u) * 5);
+        box-shadow: 0 calc(var(--u) * .8) calc(var(--u) * 2.4) var(--golge), inset 0 0 0 calc(var(--u) * .5) rgba(143,209,79,.9);
+      }
+      .logo-kart img { display: block; width: calc(var(--u) * 46); height: auto; }
+
+      .baslik {
+        position: relative; margin-top: calc(var(--u) * 12);
+        width: calc(var(--u) * 82); height: auto;
+        filter: drop-shadow(0 calc(var(--u) * 1) calc(var(--u) * 1.6) rgba(0,0,0,.25));
+        animation: baslik-gir .9s .15s cubic-bezier(.2,.9,.3,1.25) both, suzul 3.6s 1.1s ease-in-out infinite;
+      }
+
+      .alt {
+        position: absolute; left: 0; right: 0; bottom: calc(var(--u) * 11);
+        display: flex; flex-direction: column; align-items: center;
+        animation: alt-gir .8s .3s ease-out both;
+      }
+      .ilerleme-kart {
+        width: calc(var(--u) * 78);
+        background: rgba(255, 250, 240, .94);
+        border-radius: calc(var(--u) * 4.5);
+        padding: calc(var(--u) * 3.2) calc(var(--u) * 4.5) calc(var(--u) * 3.6);
+        box-shadow: 0 calc(var(--u) * 1) calc(var(--u) * 3) var(--golge), inset 0 0 0 calc(var(--u) * .45) rgba(143,209,79,.85);
+      }
+      .durum {
+        display: flex; align-items: center; justify-content: space-between;
+        font-weight: 600; font-size: calc(var(--u) * 4.4); margin-bottom: calc(var(--u) * 2.2);
+      }
+      .durum .sol { display: flex; align-items: center; gap: calc(var(--u) * 1.6); }
+      .yaprak {
+        width: calc(var(--u) * 5.2); height: calc(var(--u) * 5.2);
+        animation: yaprak-don 2.4s ease-in-out infinite;
+        transform-origin: 50% 90%;
+      }
+      #yuzde { font-weight: 700; color: var(--yesil); font-variant-numeric: tabular-nums; }
+      .ray {
+        position: relative; height: calc(var(--u) * 4.4);
+        background: #e8efd9; border-radius: 999px; overflow: hidden;
+        box-shadow: inset 0 calc(var(--u) * .35) calc(var(--u) * .8) rgba(0,0,0,.14);
+      }
+      #dolgu {
+        position: absolute; left: 0; top: 0; bottom: 0; width: 0%;
+        border-radius: 999px;
+        background: linear-gradient(180deg, #a6e05e 0%, var(--yesil) 100%);
+        box-shadow: inset 0 calc(var(--u) * .4) 0 rgba(255,255,255,.45);
+        transition: width .25s ease-out;
+      }
+      #dolgu::after {
+        content: ""; position: absolute; inset: 0;
+        background-image: repeating-linear-gradient(-45deg, rgba(255,255,255,.28) 0 calc(var(--u) * 1.6), rgba(255,255,255,0) calc(var(--u) * 1.6) calc(var(--u) * 3.2));
+        background-size: calc(var(--u) * 4.5) calc(var(--u) * 4.5);
+        animation: serit .9s linear infinite;
+      }
+      .ipucu {
+        margin-top: calc(var(--u) * 3); font-weight: 500;
+        font-size: calc(var(--u) * 3.3); color: #fff;
+        text-shadow: 0 calc(var(--u) * .3) calc(var(--u) * .8) rgba(0,0,0,.45);
+        opacity: .95;
+      }
+
+      /* Süzülen yapraklar */
+      .ucan { position: absolute; top: -8%; width: calc(var(--u) * 5); opacity: .85; pointer-events: none; animation: dus linear infinite; }
+      .ucan:nth-of-type(1) { left: 10%; animation-duration: 11s; animation-delay: -2s; }
+      .ucan:nth-of-type(2) { left: 32%; animation-duration: 14s; animation-delay: -7s; width: calc(var(--u) * 3.6); }
+      .ucan:nth-of-type(3) { left: 68%; animation-duration: 12s; animation-delay: -4s; }
+      .ucan:nth-of-type(4) { left: 86%; animation-duration: 16s; animation-delay: -10s; width: calc(var(--u) * 4); }
+
+      @keyframes zemin-zoom { from { transform: scale(1); } to { transform: scale(1.06); } }
+      @keyframes ust-gir { from { opacity: 0; transform: translateY(calc(var(--u) * -6)); } to { opacity: 1; transform: none; } }
+      @keyframes baslik-gir { from { opacity: 0; transform: scale(.7); } to { opacity: 1; transform: scale(1); } }
+      @keyframes suzul { 0%,100% { transform: translateY(0); } 50% { transform: translateY(calc(var(--u) * -1.6)); } }
+      @keyframes alt-gir { from { opacity: 0; transform: translateY(calc(var(--u) * 6)); } to { opacity: 1; transform: none; } }
+      @keyframes yaprak-don { 0%,100% { transform: rotate(-12deg); } 50% { transform: rotate(14deg); } }
+      @keyframes serit { from { background-position: 0 0; } to { background-position: calc(var(--u) * 4.5) 0; } }
+      @keyframes dus {
+        0%   { transform: translate(0, 0) rotate(0deg); }
+        50%  { transform: translate(calc(var(--u) * 6), 60vh) rotate(160deg); }
+        100% { transform: translate(calc(var(--u) * -4), 120vh) rotate(320deg); }
+      }
+
+      #unity-warning {
+        position: absolute; left: 50%; top: calc(var(--u) * 3); transform: translateX(-50%);
+        width: 90%; display: none; z-index: 10; font-size: calc(var(--u) * 3.2);
+      }
+      #unity-warning div { padding: calc(var(--u) * 2) calc(var(--u) * 3); margin-bottom: calc(var(--u) * 1.5); border-radius: calc(var(--u) * 2); }
+    </style>
+  </head>
+  <body>
+    <div id="arka-bulanik"></div>
+
+    <div id="sahne">
+      <canvas id="unity-canvas" width="1080" height="1920" tabindex="-1"></canvas>
+
+      <div id="yukleme">
+        <div class="zemin"></div>
+        <div class="perde"></div>
+
+        <svg class="ucan" viewBox="0 0 64 64"><path d="M8 56C8 26 28 8 58 6c-2 30-20 50-50 50z" fill="#7cc34a"/><path d="M10 54C24 40 36 28 50 14" stroke="#3f8a2c" stroke-width="3" fill="none" stroke-linecap="round"/></svg>
+        <svg class="ucan" viewBox="0 0 64 64"><path d="M8 56C8 26 28 8 58 6c-2 30-20 50-50 50z" fill="#9bd85c"/><path d="M10 54C24 40 36 28 50 14" stroke="#4d9a33" stroke-width="3" fill="none" stroke-linecap="round"/></svg>
+        <svg class="ucan" viewBox="0 0 64 64"><path d="M8 56C8 26 28 8 58 6c-2 30-20 50-50 50z" fill="#6bb33f"/><path d="M10 54C24 40 36 28 50 14" stroke="#347a24" stroke-width="3" fill="none" stroke-linecap="round"/></svg>
+        <svg class="ucan" viewBox="0 0 64 64"><path d="M8 56C8 26 28 8 58 6c-2 30-20 50-50 50z" fill="#a8df6a"/><path d="M10 54C24 40 36 28 50 14" stroke="#4d9a33" stroke-width="3" fill="none" stroke-linecap="round"/></svg>
+
+        <div class="ust">
+          <div class="logo-kart"><img src="TemplateData/logo.png" alt="Sıfır Atık Vakfı"></div>
+        </div>
+
+        <img class="baslik" src="TemplateData/title.png" alt="LezzetHafizasi" onerror="this.style.display='none'">
+
+        <div class="alt">
+          <div class="ilerleme-kart">
+            <div class="durum">
+              <div class="sol">
+                <svg class="yaprak" viewBox="0 0 64 64"><path d="M8 56C8 26 28 8 58 6c-2 30-20 50-50 50z" fill="#7cc34a"/><path d="M10 54C24 40 36 28 50 14" stroke="#2f7a24" stroke-width="3.5" fill="none" stroke-linecap="round"/></svg>
+                <span id="durum-yazi">Yükleniyor…</span>
+              </div>
+              <span id="yuzde">%0</span>
+            </div>
+            <div class="ray"><div id="dolgu"></div></div>
+          </div>
+          <div class="ipucu" id="ipucu">İlk açılış birkaç saniye sürebilir</div>
+        </div>
+      </div>
+
+      <div id="unity-warning"></div>
+    </div>
+
+    <script>
+      var sahne = document.getElementById("sahne");
+      var canvas = document.getElementById("unity-canvas");
+      var yukleme = document.getElementById("yukleme");
+      var dolgu = document.getElementById("dolgu");
+      var yuzde = document.getElementById("yuzde");
+      var durumYazi = document.getElementById("durum-yazi");
+      var ipucu = document.getElementById("ipucu");
+      var warningBanner = document.getElementById("unity-warning");
+
+      // 1080x1920 oranını koruyarak ekrana sığdır
+      var HEDEF_W = 1080, HEDEF_H = 1920;
+      function boyutla() {
+        var vw = window.innerWidth, vh = window.innerHeight;
+        if (window.visualViewport) { vw = window.visualViewport.width; vh = window.visualViewport.height; }
+        var olcek = Math.min(vw / HEDEF_W, vh / HEDEF_H);
+        var w = Math.floor(HEDEF_W * olcek), h = Math.floor(HEDEF_H * olcek);
+        sahne.style.width = w + "px";
+        sahne.style.height = h + "px";
+        document.documentElement.style.setProperty("--u", (w / 100) + "px");
+      }
+      window.addEventListener("resize", boyutla);
+      if (window.visualViewport) window.visualViewport.addEventListener("resize", boyutla);
+      window.addEventListener("orientationchange", function () { setTimeout(boyutla, 200); });
+      boyutla();
+
+      // Yumuşak ilerleme (Unity ilerlemesi sıçramalı gelir)
+      var hedef = 0, gosterilen = 0, bitti = false;
+      function ilerlemeCiz() {
+        gosterilen += (hedef - gosterilen) * 0.12;
+        if (Math.abs(hedef - gosterilen) < 0.002) gosterilen = hedef;
+        var p = Math.round(gosterilen * 100);
+        dolgu.style.width = p + "%";
+        yuzde.textContent = "%" + p;
+        if (!bitti || gosterilen < 1) requestAnimationFrame(ilerlemeCiz);
+      }
+      requestAnimationFrame(ilerlemeCiz);
+
+      function ilerleme(p) {
+        // Unity: indirme ~%0-90, başlatma %90-100
+        hedef = Math.max(hedef, Math.min(0.97, p));
+        if (p >= 0.9) { durumYazi.textContent = "Hazırlanıyor…"; ipucu.textContent = "Neredeyse hazır"; }
+      }
+
+      function unityShowBanner(msg, type) {
+        function updateBannerVisibility() {
+          warningBanner.style.display = warningBanner.children.length ? "block" : "none";
+        }
+        var div = document.createElement("div");
+        div.innerHTML = msg;
+        warningBanner.appendChild(div);
+        if (type == "error") div.style = "background: #c62828; color: #fff;";
+        else {
+          if (type == "warning") div.style = "background: #f9a825; color: #000;";
+          setTimeout(function () {
+            warningBanner.removeChild(div);
+            updateBannerVisibility();
+          }, 5000);
+        }
+        updateBannerVisibility();
+      }
+
+      var buildUrl = "Build";
+      var loaderUrl = buildUrl + "/WebGL.loader.js";
+      var config = {
+        dataUrl: buildUrl + "/WebGL.data.unityweb",
+        frameworkUrl: buildUrl + "/WebGL.framework.js.unityweb",
+        codeUrl: buildUrl + "/WebGL.wasm.unityweb",
+        streamingAssetsUrl: "StreamingAssets",
+        companyName: "DefaultCompany",
+        productName: "LezzetHafizasi",
+        productVersion: "0.1",
+        showBanner: unityShowBanner,
+      };
+
+      var baslangic = Date.now();
+      var script = document.createElement("script");
+      script.src = loaderUrl;
+      script.onload = function () {
+        createUnityInstance(canvas, config, ilerleme).then(function (unityInstance) {
+          bitti = true;
+          hedef = 1;
+          durumYazi.textContent = "Başlıyor!";
+          ipucu.textContent = "İyi eğlenceler";
+          // Giriş ekranı en az ~1.6 sn görünsün, sonra yumuşakça kaybolsun
+          var bekle = Math.max(700, 1600 - (Date.now() - baslangic));
+          setTimeout(function () {
+            yukleme.classList.add("bitti");
+            setTimeout(function () { yukleme.remove(); canvas.focus(); }, 700);
+          }, bekle);
+        }).catch(function (message) {
+          durumYazi.textContent = "Yüklenemedi";
+          ipucu.textContent = "Sayfayı yenilemeyi deneyin";
+          unityShowBanner(message, "error");
+        });
+      };
+      script.onerror = function () {
+        durumYazi.textContent = "Yüklenemedi";
+        ipucu.textContent = "İnternet bağlantınızı kontrol edin";
+      };
+      document.body.appendChild(script);
+    </script>
+  </body>
+</html>
